@@ -1,0 +1,25 @@
+# For a plain VPS (Hetzner, DigitalOcean, Linode…). Cheapest CPU per dollar,
+# which is what matters for video encoding.
+#   docker compose up -d --build
+services:
+  slidetovideo:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8808:8808"   # bind to localhost; put a TLS proxy in front
+    environment:
+      PORT: "8808"
+      PPT2VIDEO_JOBS: /data/jobs
+      # APP_TOKEN: set me
+      # CORS_ORIGINS: https://your-frontend.example
+    volumes:
+      - jobs:/data
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 8g
+volumes:
+  jobs:

@@ -1,0 +1,28 @@
+# fly launch --no-deploy  then  fly deploy
+app = "slidetovideo"
+primary_region = "sjc"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8808"
+  PPT2VIDEO_JOBS = "/data/jobs"
+
+[http_service]
+  internal_port = 8808
+  force_https = true
+  # Job state is in memory, so every request must reach the same machine.
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[mounts]]
+  source = "slidetovideo_data"
+  destination = "/data"
+
+[[vm]]
+  # Video encoding is CPU-bound; 1 shared CPU will crawl.
+  cpu_kind = "performance"
+  cpus = 2
+  memory = "4gb"

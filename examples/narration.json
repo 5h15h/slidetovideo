@@ -1,0 +1,33 @@
+{
+  "deck_title": "Rethinking Onboarding",
+  "voice": null,
+  "intro": null,
+  "outro": "Thanks for listening.",
+  "outro_title": "Thank you",
+  "slides": [
+    {
+      "n": 1,
+      "narration": "Every team has a number it would rather not say out loud. Ours is sixty-eight percent. That's the share of the customers we lose who were, in effect, already lost in their very first week with us.\n\nSo this is a talk about seven days. Three findings, one proposal, and I'll keep it brief."
+    },
+    {
+      "n": 2,
+      "narration": "Here's the picture that started all of this.\n\nLook at the top line first, because it's the good news. Signups are up thirty-four percent year over year. Whatever we're doing to bring people to the door is working. The top of the funnel is not our problem.\n\nNow look at everything underneath it. Activation has been flat at twenty-two percent for five straight quarters. Day-seven retention is down four points. And support tickets are up sixty-one percent.\n\nThat last number is the one I'd sit with. Rising tickets mean people aren't drifting away quietly. They're trying, they're failing, and they're asking us for help on the way out."
+    },
+    {
+      "n": 3,
+      "narration": "So we stopped guessing, and we went and watched. Forty recorded sessions, start to finish.\n\nThe same three walls came up, over and over.\n\nThe first is the empty state. Someone lands in a brand new account, and there's nothing to click. No obvious first move, no sense of what good is supposed to look like.\n\nThe second is setup. We ask for the org chart on day one. Almost nobody has the org chart on day one.\n\nAnd the third is the integration gate. The moment where the product finally earns its keep sits behind connecting another tool, which in most companies means waiting on IT. That is a week of dead air, right at the point where attention is most fragile."
+    },
+    {
+      "n": 4,
+      "narration": "Which points to a fix that's less about polish and more about order of operations. Today we ask people to configure before they get anything at all. Let's invert that.\n\nFirst, seed every new account with a working sample workspace, so there's something useful on screen in the first minute, with zero setup.\n\nSecond, defer every optional field. We counted fourteen of them in the current flow. Three are genuinely needed to start.\n\nAnd third, ship a demo path that shows the payoff with no integration at all, so that nobody's first impression depends on a ticket to IT.\n\nThat's about a six-week build, with two engineers."
+    },
+    {
+      "n": 5,
+      "narration": "Here's what we'd expect to see. And I want to be careful with that word, expect. These are modelled numbers, not promises.\n\nThey come from the three pilot cohorts we ran in September. Activation moving from twenty-two percent to thirty-one. Day-seven retention up six points. Setup tickets down by about half.\n\nActivation is the one to watch. It sits upstream of the other two, and if it doesn't move, nothing below it will either.\n\nOne honest caveat. Those pilots were self-serve only. Enterprise accounts may behave quite differently."
+    },
+    {
+      "n": 6,
+      "narration": "So, the ask.\n\nTwo engineers, six weeks. That's the whole build.\n\nWe need an executive sponsor, mostly to unblock the conversation with IT, which is the slowest dependency we have.\n\nAnd let's put a checkpoint at day thirty. If the early numbers aren't moving, we stop and rethink. Nothing here is a one-way door.\n\nI'll leave you with the number we opened on. Sixty-eight percent of churn is decided in week one. We have six weeks to change what week one feels like."
+    }
+  ]
+}

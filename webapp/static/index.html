@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SlideToVideo - turn a deck into a narrated video</title>
+<link rel="stylesheet" href="app.css">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0B0D10">
+<meta name="application-name" content="SlideToVideo">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SlideToVideo">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/assets/icon-192.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+</head>
+<body>
+<div class="bg" aria-hidden="true">
+  <div class="bg-aurora"></div>
+  <div class="bg-art"></div>
+  <div class="bg-grid"></div>
+  <div class="bg-fade"></div>
+</div>
+<div class="wrap">
+
+  <header class="top">
+    <div class="logo">
+      <span class="mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      </span>
+      <span>SlideTo<span style="font-weight:420">Video</span><span class="sub">&nbsp;&nbsp;deck → narrated video</span></span>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn sm" id="installBtn" style="display:none;margin-right:10px">Install app</button>
+    <div class="health" id="health"><span class="dot" id="healthDot"></span><span id="healthText">checking…</span></div>
+  </header>
+
+  <nav class="steps" id="steps" aria-label="Progress">
+    <div class="step active" data-step="1"><span class="num">1</span><span>Upload deck</span></div>
+    <div class="step" data-step="2"><span class="num">2</span><span>Write narration</span></div>
+    <div class="step" data-step="3"><span class="num">3</span><span>Choose voice</span></div>
+    <div class="step" data-step="4"><span class="num">4</span><span>Render video</span></div>
+  </nav>
+
+  <div id="serverDown" style="display:none">
+    <div class="notice err" style="display:flex;gap:14px;align-items:flex-start">
+      <div style="flex:1">
+        <b>The renderer isn't running.</b><br>
+        SlideToVideo does its work on this machine, so the local server has to be
+        up. Start it and press retry:
+        <div style="margin-top:8px"><code id="startCmd">./slidetovideo</code></div>
+      </div>
+      <button class="btn sm" id="retryBtn">Retry</button>
+    </div>
+  </div>
+
+  <!-- ───────────────── 1 · upload ───────────────── -->
+  <section class="panel" id="p1">
+    <div class="hero">
+      <div class="hero-copy">
+        <h1>Your deck already has the script.</h1>
+        <p>The speaker notes are the voiceover — they just need expanding into speech. Upload a presentation and get back a narrated 1080p video with captions and chapters.</p>
+        <div class="pills">
+          <span class="pill">Notes → narration</span>
+          <span class="pill">ElevenLabs voices</span>
+          <span class="pill">1080p · captions · chapters</span>
+        </div>
+      </div>
+      <div class="hero-art">
+        <img src="assets/hero.webp" alt="A presentation file flowing through processing into a narrated MP4" width="1240" height="676">
+      </div>
+    </div>
+    <div class="panel-body">
+      <div id="uploadError"></div>
+      <div class="drop" id="drop">
+        <div class="icon">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a1 1 0 0 1 .7.3l4 4a1 1 0 0 1-1.4 1.4L13 6.4V15a1 1 0 1 1-2 0V6.4L8.7 8.7a1 1 0 0 1-1.4-1.4l4-4A1 1 0 0 1 12 3Zm-7 12a1 1 0 0 1 1 1v2h12v-2a1 1 0 1 1 2 0v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1Z"/></svg>
+        </div>
+        <h3>Drop a .pptx here</h3>
+        <p>or <button class="btn sm" id="pickBtn" type="button">choose a file</button> &nbsp;·&nbsp; .pptx, .ppt and .potx, up to 200&nbsp;MB</p>
+        <input type="file" id="file" accept=".pptx,.ppt,.potx" class="sr">
+      </div>
+      <div id="uploadProgress" style="display:none;margin-top:20px">
+        <div class="prog-line"><span id="upMsg">Working…</span><span class="pct" id="upPct"></span></div>
+        <div class="bar indet"><i></i></div>
+      </div>
+      <div id="deckSummary" style="display:none;margin-top:20px"></div>
+    </div>
+  </section>
+
+  <!-- ───────────────── 2 · narration ───────────────── -->
+  <section class="panel hidden" id="p2">
+    <div class="panel-head">
+      <h2>Write the narration</h2>
+      <p>Speaker notes are shorthand written by a presenter for themselves. They need expanding into speech before a voice reads them. Draft below, then edit anything that doesn't sound like you.</p>
+    </div>
+    <div class="panel-body">
+      <div class="row" style="align-items:flex-end;margin-bottom:6px">
+        <div style="flex:0 0 auto;min-width:0">
+          <span class="lab" style="display:block;font-size:12.5px;font-weight:560;color:var(--muted);margin-bottom:6px">Writer</span>
+          <div class="seg" id="writerSeg">
+            <button data-mode="basic" class="on">Built-in</button>
+            <button data-mode="llm">Claude (eloquent)</button>
+          </div>
+        </div>
+        <label class="field" style="margin:0" id="toneWrap">
+          <span class="lab">Tone or instructions <span style="color:var(--faint)">(optional)</span></span>
+          <input type="text" id="tone" placeholder="e.g. confident but understated, for an exec audience">
+        </label>
+      </div>
+
+      <div id="llmKeyWrap" style="display:none">
+        <label class="field">
+          <span class="lab">Anthropic API key</span>
+          <input type="password" id="anthropicKey" placeholder="sk-ant-…" autocomplete="off">
+          <span class="hint">Used only to write the narration, held in memory for the request, never written to disk. The built-in writer needs no key.</span>
+        </label>
+      </div>
+
+      <div style="margin:4px 0 18px">
+        <button class="btn primary" id="draftBtn">Draft narration</button>
+        <button class="btn ghost" id="auditBtn">Re-check</button>
+        <span class="count" id="draftStatus" style="margin-left:8px"></span>
+      </div>
+
+      <div id="narrationError"></div>
+      <div id="slides"></div>
+    </div>
+    <div class="panel-foot">
+      <button class="btn ghost" data-goto="1">← Back</button>
+      <div class="spacer" style="flex:1"></div>
+      <span class="count" id="totalEstimate"></span>
+      <button class="btn primary" id="toVoice" disabled>Continue to voice →</button>
+    </div>
+  </section>
+
+  <!-- ───────────────── 3 · voice ───────────────── -->
+  <section class="panel hidden" id="p3">
+    <div class="panel-head">
+      <h2>Choose the voice</h2>
+      <p>Bring your own provider. Keys are sent from this machine to that provider only, held in memory for the render, and never written to disk.</p>
+    </div>
+    <div class="panel-body">
+      <div class="seg" id="providerSeg" style="margin-bottom:20px">
+        <button data-prov="eleven" class="on">ElevenLabs</button>
+        <button data-prov="mai">MAI-Voice</button>
+        <button data-prov="local">Local engine</button>
+      </div>
+
+      <!-- ElevenLabs -->
+      <div id="provEleven">
+        <div class="row" style="align-items:flex-end">
+          <label class="field" style="flex:2">
+            <span class="lab">ElevenLabs API key</span>
+            <input type="password" id="elKey" placeholder="sk_…" autocomplete="off">
+          </label>
+          <div style="flex:0 0 auto;margin-bottom:15px">
+            <button class="btn primary" id="connectBtn">Connect</button>
+          </div>
+        </div>
+        <div id="elError"></div>
+        <div id="elPanel" style="display:none">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+            <span class="chip ok" id="elConnected">Connected</span>
+            <span class="chip" id="elQuota"></span>
+          </div>
+          <div class="grid2">
+            <div>
+              <label class="field">
+                <span class="lab">Voice</span>
+                <input type="text" id="voiceSearch" placeholder="Search your voices…">
+              </label>
+              <div class="voice-list" id="voiceList"></div>
+            </div>
+            <div>
+              <label class="field">
+                <span class="lab">Model</span>
+                <select id="modelSel"></select>
+                <span class="hint" id="modelNote"></span>
+              </label>
+              <div class="slider-row">
+                <div class="slider-top"><span class="lab">Stability</span><span class="val" id="vStability">0.45</span></div>
+                <input type="range" id="stability" min="0" max="1" step="0.05" value="0.45">
+                <div class="slider-help">Lower is more expressive and varied. Higher is steadier. Around 0.45 suits narration.</div>
+              </div>
+              <div class="slider-row">
+                <div class="slider-top"><span class="lab">Similarity</span><span class="val" id="vSimilarity">0.75</span></div>
+                <input type="range" id="similarity" min="0" max="1" step="0.05" value="0.75">
+                <div class="slider-help">How closely output tracks the original voice. Very high can carry over recording artefacts.</div>
+              </div>
+              <div class="slider-row">
+                <div class="slider-top"><span class="lab">Style exaggeration</span><span class="val" id="vStyle">0.10</span></div>
+                <input type="range" id="style" min="0" max="1" step="0.05" value="0.10">
+                <div class="slider-help">Pushes delivery from neutral. Keep it low for business narration; it also slows generation.</div>
+              </div>
+              <div class="slider-row">
+                <div class="slider-top"><span class="lab">Speed</span><span class="val" id="vSpeed">1.00</span></div>
+                <input type="range" id="speed" min="0.7" max="1.2" step="0.01" value="1.0">
+                <div class="slider-help">Fine speed trim applied by the voice model.</div>
+              </div>
+              <label class="field">
+                <span class="lab">Output quality</span>
+                <select id="fmtSel"></select>
+              </label>
+              <label style="display:flex;align-items:center;gap:9px;font-size:13.5px;margin-bottom:16px;cursor:pointer">
+                <input type="checkbox" id="speakerBoost" checked style="width:auto"> Speaker boost
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MAI-Voice -->
+      <div id="provMai" style="display:none">
+        <div class="row" style="align-items:flex-end">
+          <label class="field" style="flex:1.4">
+            <span class="lab">MAI-Voice API key</span>
+            <input type="password" id="maiKey" placeholder="Speech resource key" autocomplete="off">
+          </label>
+          <label class="field" style="flex:1.6">
+            <span class="lab">Endpoint</span>
+            <input type="text" id="maiEndpoint" list="maiRegions" placeholder="eastus — or a full https://…/cognitiveservices/v1 URL">
+            <datalist id="maiRegions"></datalist>
+          </label>
+          <div style="flex:0 0 auto;margin-bottom:15px">
+            <button class="btn primary" id="maiCheckBtn">Verify</button>
+          </div>
+        </div>
+        <span class="hint" style="display:block;margin:-8px 0 16px">A region name expands to <code>https://&lt;region&gt;.tts.speech.microsoft.com/cognitiveservices/v1</code>. Paste a full URL for a custom or private Foundry endpoint.</span>
+        <div id="maiError"></div>
+        <div id="maiStatus" style="display:none;margin-bottom:16px">
+          <span class="chip ok" id="maiOkChip">Verified</span>
+          <span class="chip" id="maiEndpointChip"></span>
+        </div>
+
+        <div class="grid2">
+          <div>
+            <label class="field">
+              <span class="lab">Model</span>
+              <select id="maiModel"></select>
+              <span class="hint" id="maiModelNote"></span>
+            </label>
+            <div class="row">
+              <label class="field" style="flex:0 0 40%">
+                <span class="lab">Language</span>
+                <select id="maiLocale"></select>
+              </label>
+              <label class="field">
+                <span class="lab">Voice</span>
+                <select id="maiVoice"></select>
+              </label>
+            </div>
+            <span class="hint" style="display:block;margin-top:-8px">Sent as <code id="maiVoiceName">en-US-Harper:MAI-Voice-2.1</code></span>
+          </div>
+          <div>
+            <label class="field">
+              <span class="lab">Expressive style</span>
+              <select id="maiStyle"></select>
+              <input type="text" id="maiStyleFree" placeholder="style name, e.g. narrator" style="display:none;margin-top:8px">
+              <span class="hint" id="maiStyleNote"></span>
+            </label>
+            <label class="field">
+              <span class="lab">Output quality</span>
+              <select id="maiFmt"></select>
+            </label>
+            <label style="display:flex;align-items:center;gap:9px;font-size:13.5px;margin-bottom:8px;cursor:pointer">
+              <input type="checkbox" id="maiProsody" style="width:auto"> Force the pace slider onto the model
+            </label>
+            <span class="hint">Off by default. MAI paces itself, and an expressive model usually reads better left alone.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Local -->
+      <div id="provLocal" style="display:none">
+        <div class="notice info">
+          Renders with a speech engine installed on this machine. Quality varies a lot by engine — a neural one sounds fine, the bundled fallback does not.
+          <label class="field" style="margin:12px 0 0;max-width:300px">
+            <span class="lab">Local engine</span>
+            <select id="engineSel">
+              <option value="auto">Auto-detect best available</option>
+              <option value="edge">edge-tts (neural, free)</option>
+              <option value="azure">Azure / Foundry</option>
+              <option value="piper">Piper (offline neural)</option>
+              <option value="say">macOS say</option>
+              <option value="flite">flite (offline, robotic)</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid var(--hair);margin-top:20px;padding-top:18px" id="previewBlock">
+        <label class="field">
+          <span class="lab">Preview text</span>
+          <textarea id="previewText" style="min-height:64px">Here's the picture that started all of this. Signups are up thirty-four percent year over year, and activation has been flat for five straight quarters.</textarea>
+        </label>
+        <button class="btn" id="previewBtn">▶ Preview voice</button>
+        <span class="count" id="previewStatus" style="margin-left:10px"></span>
+        <audio id="previewAudio" controls style="display:none;width:100%;margin-top:14px"></audio>
+      </div>
+    </div>
+    <div class="panel-foot">
+      <button class="btn ghost" data-goto="2">← Back</button>
+      <div class="spacer" style="flex:1"></div>
+      <button class="btn primary" id="toRender">Continue to render →</button>
+    </div>
+  </section>
+
+  <!-- ───────────────── 4 · render ───────────────── -->
+  <section class="panel hidden" id="p4">
+    <div class="panel-head">
+      <h2>Render the video</h2>
+      <p>Audio drives the pacing: each slide stays on screen exactly as long as its narration takes.</p>
+    </div>
+    <div class="panel-body">
+      <div class="grid2" id="renderOpts">
+        <div>
+          <label class="field">
+            <span class="lab">Captions</span>
+            <div class="seg" id="capSeg">
+              <button data-cap="srt" class="on">Separate .srt</button>
+              <button data-cap="burn">Burned in</button>
+              <button data-cap="none">None</button>
+            </div>
+            <span class="hint">A sidecar file keeps the slide unobscured. Burning in costs one extra encode.</span>
+          </label>
+          <label class="field">
+            <span class="lab">Speaking pace — <span id="vWpm">150</span> words per minute</span>
+            <input type="range" id="wpm" min="110" max="190" step="5" value="150">
+          </label>
+        </div>
+        <div>
+          <label class="field">
+            <span class="lab">Slide motion</span>
+            <div class="seg" id="zoomSeg">
+              <button data-zoom="0.035" class="on">Subtle drift</button>
+              <button data-zoom="0.07">More</button>
+              <button data-zoom="0">Locked</button>
+            </div>
+            <span class="hint">A slow push stops a static slide reading as a frozen video.</span>
+          </label>
+          <label class="field">
+            <span class="lab">Accent colour</span>
+            <div style="display:flex;gap:9px;align-items:center">
+              <input type="text" id="accent" placeholder="auto — taken from the deck" style="flex:1">
+              <input type="color" id="accentPick" value="#5B8CFF" style="width:42px;height:38px;padding:3px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px;cursor:pointer">
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div id="renderError"></div>
+
+      <div id="renderProgress" style="display:none;margin-top:6px">
+        <div class="prog-line"><span id="rMsg">Starting…</span><span class="pct" id="rPct">0%</span></div>
+        <div class="bar"><i id="rBar"></i></div>
+      </div>
+
+      <div id="result" style="display:none;margin-top:20px">
+        <div class="notice ok">Your video is ready.</div>
+        <video id="resultVideo" controls preload="metadata"></video>
+        <div class="stat-row">
+          <div class="stat"><div class="k">Duration</div><div class="v" id="sDur">—</div></div>
+          <div class="stat"><div class="k">Size</div><div class="v" id="sSize">—</div></div>
+          <div class="stat"><div class="k">Resolution</div><div class="v">1920×1080</div></div>
+          <div class="stat"><div class="k">Voice</div><div class="v" id="sVoice">—</div></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
+          <a class="btn primary" id="dlVideo" download>Download MP4</a>
+          <a class="btn" id="dlSrt" download>Download captions</a>
+          <button class="btn ghost" id="againBtn">Render again</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel-foot">
+      <button class="btn ghost" data-goto="3">← Back</button>
+      <div class="spacer" style="flex:1"></div>
+      <button class="btn primary" id="renderBtn">Render video</button>
+    </div>
+  </section>
+
+</div>
+<script src="app.js"></script>
+</body>
+</html>

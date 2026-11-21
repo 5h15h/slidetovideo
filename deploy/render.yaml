@@ -1,0 +1,26 @@
+# Render Blueprint.  render.com → New → Blueprint → point at this repo.
+services:
+  - type: web
+    name: slidetovideo
+    runtime: docker
+    dockerfilePath: ./deploy/Dockerfile
+    dockerContext: .
+    region: oregon
+    plan: pro                 # 4 vCPU / 8 GB. standard (1 vCPU) will crawl.
+    # Job state is in memory, so this must stay at one instance.
+    # Attaching a disk already prevents Render from scaling out.
+    numInstances: 1
+    healthCheckPath: /api/health
+    disk:
+      name: jobs
+      mountPath: /data
+      sizeGB: 10
+    envVars:
+      - key: PPT2VIDEO_JOBS
+        value: /data/jobs
+      - key: PORT
+        value: "8808"
+      - key: APP_TOKEN
+        generateValue: true
+      - key: CORS_ORIGINS
+        sync: false           # set to your frontend origin, or leave blank

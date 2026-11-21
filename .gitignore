@@ -1,0 +1,28 @@
+# Working directories produced by runs
+jobs/
+work/
+*.mp4
+*.srt
+*.wav
+
+# Built frontend bundle (regenerate with deploy/build-frontend.sh)
+deploy/vercel/public/
+
+# Secrets — never commit a provider key
+.env
+*.env
+!deploy/*.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

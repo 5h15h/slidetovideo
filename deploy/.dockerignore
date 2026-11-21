@@ -1,0 +1,9 @@
+jobs/
+work/
+examples/
+deploy/
+tools/
+agent/
+__pycache__/
+*.pyc
+*.mp4

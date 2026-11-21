@@ -1,0 +1,95 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  static-checks:
+    name: syntax and imports
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Byte-compile every module
+        run: python -m compileall -q pipeline webapp tools slidetovideo.py
+      - name: Import the pipeline and the app
+        run: |
+          python - <<'PY'
+          import sys; sys.path.insert(0, "pipeline")
+          import common, narrate, maivoice, elevenlabs, tts   # noqa: F401
+          import webapp.server                                 # noqa: F401
+          print("imports ok")
+          PY
+      - name: Frontend parses
+        run: |
+          node --check webapp/static/app.js
+          node --check webapp/static/sw.js
+      - name: Manifest is valid JSON
+        run: python -c "import json;json.load(open('webapp/static/manifest.webmanifest'));print('manifest ok')"
+
+  pipeline-smoke:
+    name: end-to-end (no voice)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: System tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libreoffice-impress poppler-utils ffmpeg \
+            fonts-crosextra-carlito fonts-crosextra-caladea fonts-dejavu-core
+      - run: pip install -r requirements.txt
+      - name: Build a sample deck and extract it
+        run: |
+          python examples/make_sample_deck.py
+          python pipeline/extract.py examples/sample_deck.pptx --out /tmp/w
+      - name: Draft narration and time it
+        run: |
+          python - <<'PY'
+          import json, sys; sys.path.insert(0, "pipeline")
+          from narrate import compose_basic, audit
+          deck = json.load(open("/tmp/w/deck.json"))
+          nar = compose_basic(deck)
+          json.dump(nar, open("/tmp/w/narration.json", "w"))
+          flags = audit(nar, deck)
+          print(f"{sum(1 for s in nar['slides'] if not s['skip'])} slides, {len(flags)} audit flags")
+          assert any(not s["skip"] for s in nar["slides"]), "nothing narrated"
+          PY
+          python pipeline/synth.py /tmp/w --tts silent --wpm 150
+      - name: Render sample frames
+        run: python pipeline/assemble.py /tmp/w --preview
+      - uses: actions/upload-artifact@v4
+        with:
+          name: preview-frames
+          path: /tmp/w/preview/*.png
+
+  docker:
+    name: renderer image builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile
+          push: false
+          load: true
+          tags: slidetovideo:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: The image has the tools it claims
+        run: |
+          docker run --rm slidetovideo:ci sh -c \
+            'soffice --version && ffmpeg -version | head -1 && pdftoppm -v 2>&1 | head -1'
